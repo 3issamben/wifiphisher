@@ -317,7 +317,9 @@ class ExtensionManager(object):
         :return: None
         :rtype: None
         """
-
+        # clear the _packets_to_send on every run of the
+        # sniffed frame
+        self._packets_to_send = defaultdict(list)
         for extension in self._extensions:
             extension_pkts_to_send = extension.get_packet(pkt)
             self._packets_to_send.update(extension_pkts_to_send)

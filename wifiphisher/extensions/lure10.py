@@ -51,6 +51,10 @@ class Lure10(object):
         beacons = list()
         bssid = str()
 
+        # initiliate the _packets_to_send in first run
+        if self.first_run:
+            self._packets_to_send["*"] = beacons
+
         # only run this code once
         if self.first_run and self.data.args.lure10_exploit:
             # locate the lure10 file
