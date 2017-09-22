@@ -5,6 +5,7 @@ Extension that sends 3 DEAUTH/DISAS Frames:
  1 to the broadcast address
 """
 
+from collections import defaultdict
 import scapy.layers.dot11 as dot11
 import wifiphisher.common.constants as constants
 
@@ -31,6 +32,8 @@ class Deauth(object):
         self._data = data
         # the bssids having the same ESSID
         self._deauth_bssids = set()
+        # channel mapping to the frames list
+        self._packets_to_send = defaultdict(list)
 
     @staticmethod
     def _craft_packet(sender, receiver, bssid):
@@ -124,7 +127,6 @@ class Deauth(object):
         :rtype: tuple
         """
 
-        channels = list()
         packets_to_send = list()
 
         # basic malformed frame check
@@ -132,11 +134,11 @@ class Deauth(object):
             # Discard WDS frame
             ds_value = packet.FCfield & 3
             if ds_value == 3:
-                return ([], [])
+                return self._packets_to_send
             receiver = packet.addr1
             sender = packet.addr2
         except AttributeError:
-            return ([], [])
+            return self._packets_to_send
 
         # obtain the channel for this packet
         try:
@@ -145,12 +147,10 @@ class Deauth(object):
 
             # check if this is valid channel
             if channel not in constants.ALL_2G_CHANNELS:
-                return ([], [])
-
-            channels.append(str(channel))
+                return self._packets_to_send
         except (TypeError, IndexError):
             # just return empty channel and packet
-            return ([], [])
+            return self._packets_to_send
 
         bssid = self._extract_bssid(packet)
         # check beacon if this is our target deauthing BSSID
@@ -162,16 +162,18 @@ class Deauth(object):
                                                   constants.WIFI_BROADCAST,
                                                   bssid)
             self._deauth_bssids.add(bssid)
+            print 'get BSSID', self._deauth_bssids
 
         if bssid not in self._deauth_bssids:
-            return ([], [])
+            return self._packets_to_send
 
         clients = self._add_clients(sender, receiver, bssid)
         if clients:
             self._observed_clients.add(clients[0])
             packets_to_send += clients[1]
+        self._packets_to_send[str(channel)] += packets_to_send
 
-        return (channels, packets_to_send)
+        return self._packets_to_send
 
     def _add_clients(self, sender, receiver, bssid):
         """

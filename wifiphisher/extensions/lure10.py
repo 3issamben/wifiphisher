@@ -6,6 +6,7 @@ to automatic association by fooling the Windows
 Location Service
 """
 
+from collections import defaultdict
 import wifiphisher.common.constants as constants
 import scapy.layers.dot11 as dot11
 
@@ -29,6 +30,8 @@ class Lure10(object):
 
         self.first_run = True
         self.data = shared_data
+        # store channel to frame list
+        self._packets_to_send = defaultdict(list)
 
     def get_packet(self, pkt):
         """
@@ -77,8 +80,8 @@ class Lure10(object):
 
                     # make sure this block is never executed again and the notification occurs
                     self.first_run = False
-
-        return (["*"], beacons)
+            self._packets_to_send["*"] = beacons
+        return self._packets_to_send
 
     def send_output(self):
         """

@@ -6,6 +6,7 @@ import time
 import importlib
 import threading
 import collections
+from collections import defaultdict
 import scapy.layers.dot11 as dot11
 import scapy.arch.linux as linux
 import wifiphisher.common.constants as constants
@@ -74,7 +75,7 @@ class ExtensionManager(object):
         self._interface = None
         self._socket = None
         self._should_continue = True
-        self._packets_to_send = {str(k): [] for k in range(1, 14)}
+        self._packets_to_send = defaultdict(list)
         self._packets_to_send["*"] = []
         self._channels_to_hop = []
         self._current_channel = "1"
@@ -318,11 +319,8 @@ class ExtensionManager(object):
         """
 
         for extension in self._extensions:
-            channel_nums, received_packets = extension.get_packet(pkt)
-            num_of_packets = len(received_packets)
-            if received_packets and num_of_packets > 0:
-                for c_num in channel_nums:
-                    self._packets_to_send[c_num] += received_packets
+            extension_pkts_to_send = extension.get_packet(pkt)
+            self._packets_to_send.update(extension_pkts_to_send)
 
     def _stopfilter(self, pkt):
         """
@@ -368,11 +366,11 @@ class ExtensionManager(object):
         :return: None
         :rtype: None
         """
-
         while self._should_continue:
             for pkt in self._packets_to_send[self._current_channel] + \
                     self._packets_to_send["*"]:
                 try:
+                    print 'send', pkt.addr3, pkt.addr1
                     self._socket.send(pkt)
                 except BaseException:
                     continue
