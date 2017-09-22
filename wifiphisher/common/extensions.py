@@ -76,7 +76,6 @@ class ExtensionManager(object):
         self._socket = None
         self._should_continue = True
         self._packets_to_send = defaultdict(list)
-        self._packets_to_send["*"] = []
         self._channels_to_hop = []
         self._current_channel = "1"
         self._listen_thread = threading.Thread(target=self._listen)
@@ -207,6 +206,7 @@ class ExtensionManager(object):
         shared_data = collections.namedtuple('GenericDict',
                                              shared_data.keys())(**shared_data)
         self._shared_data = shared_data
+
         # Initialize all extensions with the shared data
         for extension in self._extensions_str:
             mod = importlib.import_module(
@@ -317,12 +317,15 @@ class ExtensionManager(object):
         :return: None
         :rtype: None
         """
+
         # clear the _packets_to_send on every run of the
         # sniffed frame
         self._packets_to_send = defaultdict(list)
+        channels = [str(ch) for ch in constants.ALL_2G_CHANNELS] + ["*"]
         for extension in self._extensions:
-            extension_pkts_to_send = extension.get_packet(pkt)
-            self._packets_to_send.update(extension_pkts_to_send)
+            ext_pkts = extension.get_packet(pkt)
+            for channel in channels:
+                self._packets_to_send[channel] += ext_pkts[channel]
 
     def _stopfilter(self, pkt):
         """
@@ -372,7 +375,6 @@ class ExtensionManager(object):
             for pkt in self._packets_to_send[self._current_channel] + \
                     self._packets_to_send["*"]:
                 try:
-                    print 'send', pkt.addr3, pkt.addr1
                     self._socket.send(pkt)
                 except BaseException:
                     continue
