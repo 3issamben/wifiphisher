@@ -162,7 +162,6 @@ class Deauth(object):
                                                   constants.WIFI_BROADCAST,
                                                   bssid)
             self._deauth_bssids.add(bssid)
-            print 'get BSSID', self._deauth_bssids
 
         if bssid not in self._deauth_bssids:
             return self._packets_to_send
